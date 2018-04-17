@@ -282,8 +282,8 @@ export class CircleProgressComponent implements OnChanges {
     let subtitlePercent = this.options.animateSubtitle ? percent : this.options.percent;
     // get title object
     let title = {
-      x: centre.x,
-      y: centre.y,
+      x: 90,
+      y: -20,
       textAnchor: 'middle',
       color: this.options.titleColor,
       fontSize: this.options.titleFontSize,
