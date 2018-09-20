@@ -8,14 +8,22 @@
 
 ## About
 
-It is a simple circle progress component created for Angular 4 based only on SVG graphics and has various of options to customize it.
+It is a simple circle progress component created for [angular](https://angular.io) based only on SVG graphics and has various of options to customize it.
 
 ## Installation
 
 To install this library, run:
 
+### Angular 6 projects
+
 ```bash
 $ npm install ng-circle-progress --save
+```
+
+### Angular 5 or Angular 4 projects
+
+```bash
+$ npm install ng-circle-progress@1.0.0 --save
 ```
 
 Once you have installed it, you can import it in any Angular application,
@@ -82,6 +90,8 @@ percent | `number` | `0` | Number of percent you want to show
 maxPercent | `number` | `1000` | Max number of percent you want to show
 radius | `number` | `90` | Radius of circle
 clockwise | `boolean` | `true` | Whether to rotate clockwise or counter-clockwise
+responsive | `boolean` | `false` | Whether to make the circle responsive
+startFromZero | `boolean` | `true` | Whether to start the percent from zero 
 showTitle | `boolean` | `true` | Whether to display title
 showSubtitle | `boolean` | `true` | Whether to display subtitle
 showUnits | `boolean` | `true` | Whether to display units
@@ -103,11 +113,11 @@ outerStrokeColor | `sting` | `'#78C000'` | Stroke color of outer circle
 outerStrokeLinecap | `sting` | `'round'` | Stroke linecap of outer circle. Possible values(butt, round, square, inherit)
 innerStrokeWidth | `number` | `4` | Stroke width of inner circle
 innerStrokeColor | `sting` | `'#C7E596'` | Stroke color of inner circle
-title | `string|Array<String>` | `'auto'` | text showed as title. Percentage is displayed when title equals 'auto'.
+title | `string\|Array<String>` | `'auto'` | text showed as title. Percentage is displayed when title equals 'auto'.
 titleFormat | `Function` | `undefined` | A callback function to format title. It returns a string or an array of string.
 titleColor | `string` | `'#444444'` | Font color of title
 titleFontSize | `string` | `'20'` | Font size of title
-subtitle | `string|Array<String>` | `'Percent'` | text showed as subtitle
+subtitle | `string\|Array<String>` | `'Percent'` | text showed as subtitle
 subtitleFormat | `Function` | `undefined` | A callback function to format subtitle. It returns a string or an array of string.
 subtitleColor | `string` | `'#A9A9A9'` | Font color of subtitle
 subtitleFontSize | `string` | `'10'` | Font size of subtitle
@@ -134,7 +144,7 @@ formatSubtitle = (percent: number) : string => {
 
 ```
 
-## Development
+## Development (needs Angular 6)
 
 To generate all `*.js`, `*.d.ts` and `*.metadata.json` files:
 
