@@ -1,4 +1,4 @@
-import { OnChanges, EventEmitter } from '@angular/core';
+import { EventEmitter, OnChanges } from '@angular/core';
 export interface CircleProgressOptionsInterface {
     class?: string;
     backgroundColor?: string;
@@ -38,6 +38,10 @@ export interface CircleProgressOptionsInterface {
     showBackground?: boolean;
     showInnerStroke?: boolean;
     clockwise?: boolean;
+    responsive?: boolean;
+    startFromZero?: boolean;
+    startTime?:number;
+    startPercent?:number;
 }
 export declare class CircleProgressOptions implements CircleProgressOptionsInterface {
     class: string;
@@ -78,6 +82,10 @@ export declare class CircleProgressOptions implements CircleProgressOptionsInter
     showBackground: boolean;
     showInnerStroke: boolean;
     clockwise: boolean;
+    responsive: boolean;
+    startFromZero: boolean;
+    startTime:number;
+    startPercent:number;
 }
 export declare class CircleProgressComponent implements OnChanges {
     onClick: EventEmitter<any>;
@@ -119,29 +127,34 @@ export declare class CircleProgressComponent implements OnChanges {
     showBackground: boolean;
     showInnerStroke: boolean;
     clockwise: boolean;
+    responsive: boolean;
+    startFromZero: boolean;
+    startTime:number;
+    startPercent:number;
     templateOptions: CircleProgressOptions;
     svg: any;
     options: CircleProgressOptions;
     defaultOptions: CircleProgressOptions;
-    private _timerSubscription;
-    isDrawing(): boolean;
-    constructor(defaultOptions: CircleProgressOptions);
-    ngOnChanges(changes: any): void;
-    private applyOptions;
+    _lastPercent: number;
     render: () => void;
     polarToCartesian: (centerX: any, centerY: any, radius: any, angleInDegrees: any) => {
         x: any;
         y: number;
     };
     draw: (percent: number) => void;
-    private getRelativeY;
-    private min;
-    private max;
-    getAnimationParameters: () => {
+    getAnimationParameters: (previousPercent: number, currentPercent: number) => {
         times: any;
         step: any;
         interval: any;
     };
-    animate: () => void;
+    animate: (previousPercent: number, currentPercent: number) => void;
     emitClickEvent: (event: any) => void;
+    private _timerSubscription;
+    private applyOptions;
+    private getRelativeY;
+    private min;
+    private max;
+    constructor(defaultOptions: CircleProgressOptions);
+    isDrawing(): boolean;
+    ngOnChanges(changes: any): void;
 }

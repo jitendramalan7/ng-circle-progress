@@ -1,8 +1,16 @@
 import { Component, EventEmitter, Input, NgModule, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Observable } from 'rxjs/Rx';
+import { timer } from 'rxjs';
 
-var CircleProgressOptions = (function () {
+/**
+ * @fileoverview added by tsickle
+ * @suppress {checkTypes} checked by tsc
+ */
+/**
+ * @record
+ */
+
+var CircleProgressOptions = /** @class */ (function () {
     function CircleProgressOptions() {
         this.class = '';
         this.backgroundColor = 'transparent';
@@ -42,47 +50,29 @@ var CircleProgressOptions = (function () {
         this.showBackground = true;
         this.showInnerStroke = true;
         this.clockwise = true;
+        this.responsive = false;
+        this.startFromZero = true;
+        this.startTime = 0;
+        this.startPercent = 0;
     }
     return CircleProgressOptions;
 }());
-var CircleProgressComponent = (function () {
-    /**
-     * @param {?} defaultOptions
-     */
+var CircleProgressComponent = /** @class */ (function () {
     function CircleProgressComponent(defaultOptions) {
         var _this = this;
         this.onClick = new EventEmitter();
         this.options = new CircleProgressOptions();
         this.defaultOptions = new CircleProgressOptions();
-        this.applyOptions = function () {
-            // the options of <circle-progress> may change already
-            for (var _i = 0, _a = Object.keys(_this.options); _i < _a.length; _i++) {
-                var name_1 = _a[_i];
-                if (_this.hasOwnProperty(name_1) && _this[name_1] !== undefined) {
-                    _this.options[name_1] = _this[name_1];
-                }
-                else if (_this.templateOptions && _this.templateOptions[name_1] !== undefined) {
-                    _this.options[name_1] = _this.templateOptions[name_1];
-                }
-            }
-            // make sure key options valid
-            _this.options.radius = Math.abs(+_this.options.radius);
-            _this.options.space = +_this.options.space;
-            _this.options.percent = Math.abs(+_this.options.percent);
-            _this.options.maxPercent = Math.abs(+_this.options.maxPercent);
-            _this.options.animationDuration = Math.abs(_this.options.animationDuration);
-            _this.options.outerStrokeWidth = Math.abs(+_this.options.outerStrokeWidth);
-            _this.options.innerStrokeWidth = Math.abs(+_this.options.innerStrokeWidth);
-            _this.options.backgroundPadding = +_this.options.backgroundPadding;
-        };
+        this._lastPercent = 0;
         this.render = function () {
             _this.applyOptions();
             if (_this.options.animation && _this.options.animationDuration > 0) {
-                _this.animate();
+                _this.animate(_this.options.startPercent, _this.options.percent);
             }
             else {
                 _this.draw(_this.options.percent);
             }
+            _this._lastPercent = _this.options.percent;
         };
         this.polarToCartesian = function (centerX, centerY, radius, angleInDegrees) {
             var /** @type {?} */ angleInRadius = angleInDegrees * Math.PI / 180;
@@ -105,7 +95,9 @@ var CircleProgressComponent = (function () {
             // the start point of the arc
             var /** @type {?} */ startPoint = { x: centre.x, y: centre.y - _this.options.radius };
             // get the end point of the arc
-            var /** @type {?} */ endPoint = _this.polarToCartesian(centre.x, centre.y, _this.options.radius, 360 * (_this.options.clockwise ? circlePercent : (100 - circlePercent)) / 100); // ####################
+            var /** @type {?} */ endPoint = _this.polarToCartesian(centre.x, centre.y, _this.options.radius, 360 * (_this.options.clockwise ?
+                circlePercent :
+                (100 - circlePercent)) / 100); // ####################
             // We'll get an end point with the same [x, y] as the start point when percent is 100%, so move x a little bit.
             if (circlePercent === 100) {
                 endPoint.x = endPoint.x + (_this.options.clockwise ? -0.01 : +0.01);
@@ -125,10 +117,11 @@ var CircleProgressComponent = (function () {
             var /** @type {?} */ subtitlePercent = _this.options.animateSubtitle ? percent : _this.options.percent;
             // get title object
             var /** @type {?} */ title = {
+                //manual changes //position changes
                 // x: centre.x,
-				x: 90,
                 // y: centre.y,
-				y: -20,
+                x: 90,
+                y: -20,
                 textAnchor: 'middle',
                 color: _this.options.titleColor,
                 fontSize: _this.options.titleFontSize,
@@ -213,9 +206,12 @@ var CircleProgressComponent = (function () {
                 }
             }
             // Bring it all together
+            // Bring it all together
             _this.svg = {
-                width: boxSize,
-                height: boxSize,
+                viewBox: "0 0 " + boxSize + " " + boxSize,
+                // Set both width and height to '100%' if it's responsive
+                width: _this.options.responsive ? '100%' : boxSize,
+                height: _this.options.responsive ? '100%' : boxSize,
                 backgroundCircle: {
                     cx: centre.x,
                     cy: centre.y,
@@ -227,7 +223,7 @@ var CircleProgressComponent = (function () {
                 },
                 path: {
                     // A rx ry x-axis-rotation large-arc-flag sweep-flag x y (https://developer.mozilla.org/en/docs/Web/SVG/Tutorial/Paths#Arcs)
-                    d: "M " + startPoint.x + " " + startPoint.y + " \n        A " + _this.options.radius + " " + _this.options.radius + " 0 " + largeArcFlag + " " + sweepFlag + " " + endPoint.x + " " + endPoint.y,
+                    d: "M " + startPoint.x + " " + startPoint.y + "\n        A " + _this.options.radius + " " + _this.options.radius + " 0 " + largeArcFlag + " " + sweepFlag + " " + endPoint.x + " " + endPoint.y,
                     stroke: _this.options.outerStrokeColor,
                     strokeWidth: _this.options.outerStrokeWidth,
                     strokeLinecap: _this.options.outerStrokeLinecap,
@@ -247,6 +243,120 @@ var CircleProgressComponent = (function () {
             };
             var _a, _b;
         };
+        this.getAnimationParameters = function (previousPercent, currentPercent) {
+            var /** @type {?} */ MIN_INTERVAL = 10;
+            var /** @type {?} */ times, /** @type {?} */ step, /** @type {?} */ interval;
+            var /** @type {?} */ fromPercent = _this.options.startFromZero ? 0 : (previousPercent < 0 ? 0 : previousPercent);
+            var /** @type {?} */ toPercent = currentPercent < 0 ? 0 : _this.min(currentPercent, _this.options.maxPercent);
+            var /** @type {?} */ delta = Math.abs(Math.round(toPercent - fromPercent));
+            if (delta >= 100) {
+                // we will finish animation in 100 times
+                times = 100;
+                if (!_this.options.animateTitle && !_this.options.animateSubtitle) {
+                    step = 1;
+                }
+                else {
+                    // show title or subtitle animation even if the arc is full, we also need to finish it in 100 times.
+                    step = Math.round(delta / times);
+                }
+            }
+            else {
+                // we will finish in as many times as the number of percent.
+                times = delta;
+                step = 1;
+            }
+            // Get the interval of timer
+            interval = Math.round(_this.options.animationDuration / times);
+            // Readjust all values if the interval of timer is extremely small.
+            if (interval < MIN_INTERVAL) {
+                interval = MIN_INTERVAL;
+                times = _this.options.animationDuration / interval;
+                if (!_this.options.animateTitle && !_this.options.animateSubtitle && delta > 100) {
+                    step = Math.round(100 / times);
+                }
+                else {
+                    step = Math.round(delta / times);
+                }
+            }
+            // step must be greater than 0.
+            if (step < 1) {
+                step = 1;
+            }
+            return { times: times, step: step, interval: interval };
+        };
+        this.animate = function (previousPercent, currentPercent) {
+            if (_this._timerSubscription && !_this._timerSubscription.closed) {
+                _this._timerSubscription.unsubscribe();
+            }
+            var /** @type {?} */ fromPercent = _this.options.startFromZero ? 0 : previousPercent;
+            var /** @type {?} */ toPercent = currentPercent;
+            var _a = _this.getAnimationParameters(fromPercent, toPercent), step = _a.step, interval = _a.interval;
+            var /** @type {?} */ count = fromPercent;
+            if (fromPercent < toPercent) {
+                _this._timerSubscription = timer(_this.options.startTime, interval).subscribe(function () {
+                    count += step;
+                    if (count <= toPercent) {
+                        if (!_this.options.animateTitle && !_this.options.animateSubtitle && count >= 100) {
+                            _this.draw(toPercent);
+                            _this._timerSubscription.unsubscribe();
+                        }
+                        else {
+                            _this.draw(count);
+                        }
+                    }
+                    else {
+                        _this.draw(toPercent);
+                        _this._timerSubscription.unsubscribe();
+                    }
+                });
+            }
+            else {
+                _this._timerSubscription = timer(0, interval).subscribe(function () {
+                    count -= step;
+                    if (count >= toPercent) {
+                        if (!_this.options.animateTitle && !_this.options.animateSubtitle && toPercent >= 100) {
+                            _this.draw(toPercent);
+                            _this._timerSubscription.unsubscribe();
+                        }
+                        else {
+                            _this.draw(count);
+                        }
+                    }
+                    else {
+                        _this.draw(toPercent);
+                        _this._timerSubscription.unsubscribe();
+                    }
+                });
+            }
+        };
+        this.emitClickEvent = function (event) {
+            if (_this.options.renderOnClick) {
+                _this.animate(0, _this.options.percent);
+            }
+            _this.onClick.emit(event);
+        };
+        this.applyOptions = function () {
+            // the options of <circle-progress> may change already
+            for (var _i = 0, _a = Object.keys(_this.options); _i < _a.length; _i++) {
+                var name_1 = _a[_i];
+                if (_this.hasOwnProperty(name_1) && _this[name_1] !== undefined) {
+                    _this.options[name_1] = _this[name_1];
+                }
+                else if (_this.templateOptions && _this.templateOptions[name_1] !== undefined) {
+                    _this.options[name_1] = _this.templateOptions[name_1];
+                }
+            }
+            // make sure key options valid
+            // make sure key options valid
+            _this.options.radius = Math.abs(+_this.options.radius);
+            _this.options.space = +_this.options.space;
+            _this.options.percent = +_this.options.percent > 0 ? +_this.options.percent : 0;
+            _this.options.maxPercent = Math.abs(+_this.options.maxPercent);
+            _this.options.animationDuration = Math.abs(_this.options.animationDuration);
+            _this.options.outerStrokeWidth = Math.abs(+_this.options.outerStrokeWidth);
+            _this.options.innerStrokeWidth = Math.abs(+_this.options.innerStrokeWidth);
+            _this.options.backgroundPadding = +_this.options.backgroundPadding;
+        };
         this.getRelativeY = function (rowNum, rowCount) {
             // why '-0.18em'? It's a magic number when property 'alignment-baseline' equals 'baseline'. :)
             var /** @type {?} */ initialOffset = -0.18, /** @type {?} */ offset = 1;
@@ -258,166 +368,119 @@ var CircleProgressComponent = (function () {
         this.max = function (a, b) {
             return a > b ? a : b;
         };
-        this.getAnimationParameters = function () {
-            var /** @type {?} */ MIN_INTERVAL = 10;
-            var /** @type {?} */ times, /** @type {?} */ step, /** @type {?} */ interval;
-            if (_this.options.percent >= 100) {
-                // we will finish animation in 100 times
-                times = 100;
-                if (!_this.options.animateTitle && !_this.options.animateSubtitle) {
-                    step = 1;
-                }
-                else {
-                    // show title or subtitle animation even if the arc is full, we also need to finish it in 100 times.
-                    step = Math.round(_this.min(_this.options.percent, _this.options.maxPercent) / times);
-                }
-            }
-            else {
-                // we will finish in as many times as the number of percent.
-                times = _this.options.percent;
-                step = 1;
-            }
-            // Get the interval of timer
-            interval = Math.round(_this.options.animationDuration / times);
-            // Readjust all values if the interval of timer is extremely small.
-            if (interval < MIN_INTERVAL) {
-                interval = MIN_INTERVAL;
-                times = _this.options.animationDuration / interval;
-                if (!_this.options.animateTitle && !_this.options.animateSubtitle && _this.options.percent > 100) {
-                    step = Math.round(100 / times);
-                }
-                else {
-                    step = Math.round(_this.min(_this.options.percent, _this.options.maxPercent) / times);
-                }
-            }
-            // step must be greater than 0.
-            if (step < 1) {
-                step = 1;
-            }
-            return { times: times, step: step, interval: interval };
-        };
-        this.animate = function () {
-            if (_this._timerSubscription && !_this._timerSubscription.closed) {
-                _this._timerSubscription.unsubscribe();
-            }
-            var _a = _this.getAnimationParameters(), step = _a.step, interval = _a.interval;
-            var /** @type {?} */ count = 0;
-            _this._timerSubscription = Observable.timer(0, interval).subscribe(function () {
-                count += step;
-                if (count <= _this.options.percent) {
-                    if (!_this.options.animateTitle && !_this.options.animateSubtitle && count >= 100) {
-                        _this.draw(_this.options.percent);
-                        _this._timerSubscription.unsubscribe();
-                    }
-                    else {
-                        _this.draw(count);
-                    }
-                }
-                else {
-                    _this.draw(_this.options.percent);
-                    _this._timerSubscription.unsubscribe();
-                }
-            });
-        };
-        this.emitClickEvent = function (event) {
-            if (_this.options.renderOnClick) {
-                _this.animate();
-            }
-            _this.onClick.emit(event);
-        };
         Object.assign(this.options, defaultOptions);
         Object.assign(this.defaultOptions, defaultOptions);
     }
     /**
      * @return {?}
      */
-    CircleProgressComponent.prototype.isDrawing = function () {
-        return (this._timerSubscription && !this._timerSubscription.closed) ? true : false;
-    };
+    CircleProgressComponent.prototype.isDrawing = /**
+     * @return {?}
+     */
+        function () {
+            return (this._timerSubscription && !this._timerSubscription.closed);
+        };
     /**
      * @param {?} changes
      * @return {?}
      */
-    CircleProgressComponent.prototype.ngOnChanges = function (changes) {
-        this.render();
+    CircleProgressComponent.prototype.ngOnChanges = /**
+     * @param {?} changes
+     * @return {?}
+     */
+        function (changes) {
+            this.render();
+        };
+    CircleProgressComponent.decorators = [
+        {
+            type: Component, args: [{
+                selector: 'circle-progress',
+                template: "\n        <svg xmlns=\"http://www.w3.org/2000/svg\" *ngIf=\"svg\"\n             [attr.viewBox]=\"svg.viewBox\" preserveAspectRatio=\"xMidYMid meet\"\n             [attr.height]=\"svg.height\" [attr.width]=\"svg.width\" (click)=\"emitClickEvent($event)\" [attr.class]=\"options.class\">\n            <circle *ngIf=\"options.showBackground\"\n                    [attr.cx]=\"svg.backgroundCircle.cx\"\n                    [attr.cy]=\"svg.backgroundCircle.cy\"\n                    [attr.r]=\"svg.backgroundCircle.r\"\n                    [attr.fill]=\"svg.backgroundCircle.fill\"\n                    [attr.fill-opacity]=\"svg.backgroundCircle.fillOpacity\"\n                    [attr.stroke]=\"svg.backgroundCircle.stroke\"\n                    [attr.stroke-width]=\"svg.backgroundCircle.strokeWidth\"/>\n            <circle *ngIf=\"options.showInnerStroke\"\n                    [attr.cx]=\"svg.circle.cx\"\n                    [attr.cy]=\"svg.circle.cy\"\n                    [attr.r]=\"svg.circle.r\"\n                    [attr.fill]=\"svg.circle.fill\"\n                    [attr.stroke]=\"svg.circle.stroke\"\n                    [attr.stroke-width]=\"svg.circle.strokeWidth\"/>\n            <path\n                    [attr.d]=\"svg.path.d\"\n                    [attr.stroke]=\"svg.path.stroke\"\n                    [attr.stroke-width]=\"svg.path.strokeWidth\"\n                    [attr.stroke-linecap]=\"svg.path.strokeLinecap\"\n                    [attr.fill]=\"svg.path.fill\"/>\n            <text *ngIf=\"options.showTitle || options.showUnits || options.showSubtitle\"\n                  alignment-baseline=\"baseline\"\n                  [attr.x]=\"svg.circle.cx\"\n                  [attr.y]=\"svg.circle.cy\"\n                  [attr.text-anchor]=\"svg.title.textAnchor\">\n                <ng-container *ngIf=\"options.showTitle\">\n                    <tspan *ngFor=\"let tspan of svg.title.tspans\"\n                           [attr.x]=\"svg.title.x\"\n                           [attr.y]=\"svg.title.y\"\n                           [attr.dy]=\"tspan.dy\"\n                           [attr.font-size]=\"svg.title.fontSize\"\n                           [attr.fill]=\"svg.title.color\">{{tspan.span}}\n                    </tspan>\n                </ng-container>\n                <tspan *ngIf=\"options.showUnits\"\n                       [attr.font-size]=\"svg.units.fontSize\"\n                       [attr.fill]=\"svg.units.color\">{{svg.units.text}}\n                </tspan>\n                <ng-container *ngIf=\"options.showSubtitle\">\n                    <tspan *ngFor=\"let tspan of svg.subtitle.tspans\"\n                           [attr.x]=\"svg.subtitle.x\"\n                           [attr.y]=\"svg.subtitle.y\"\n                           [attr.dy]=\"tspan.dy\"\n                           [attr.font-size]=\"svg.subtitle.fontSize\"\n                           [attr.fill]=\"svg.subtitle.color\">{{tspan.span}}\n                    </tspan>\n                </ng-container>\n            </text>\n        </svg>\n    "
+            },]
+        },
+    ];
+    /** @nocollapse */
+    CircleProgressComponent.ctorParameters = function () {
+        return [
+            { type: CircleProgressOptions }
+        ];
+    };
+    CircleProgressComponent.propDecorators = {
+        onClick: [{ type: Output }],
+        class: [{ type: Input }],
+        backgroundColor: [{ type: Input }],
+        backgroundOpacity: [{ type: Input }],
+        backgroundStroke: [{ type: Input }],
+        backgroundStrokeWidth: [{ type: Input }],
+        backgroundPadding: [{ type: Input }],
+        radius: [{ type: Input }],
+        space: [{ type: Input }],
+        percent: [{ type: Input }],
+        toFixed: [{ type: Input }],
+        maxPercent: [{ type: Input }],
+        renderOnClick: [{ type: Input }],
+        units: [{ type: Input }],
+        unitsFontSize: [{ type: Input }],
+        unitsColor: [{ type: Input }],
+        outerStrokeWidth: [{ type: Input }],
+        outerStrokeColor: [{ type: Input }],
+        outerStrokeLinecap: [{ type: Input }],
+        innerStrokeColor: [{ type: Input }],
+        innerStrokeWidth: [{ type: Input }],
+        titleFormat: [{ type: Input }],
+        title: [{ type: Input }],
+        titleColor: [{ type: Input }],
+        titleFontSize: [{ type: Input }],
+        subtitleFormat: [{ type: Input }],
+        subtitle: [{ type: Input }],
+        subtitleColor: [{ type: Input }],
+        subtitleFontSize: [{ type: Input }],
+        animation: [{ type: Input }],
+        animateTitle: [{ type: Input }],
+        animateSubtitle: [{ type: Input }],
+        animationDuration: [{ type: Input }],
+        showTitle: [{ type: Input }],
+        showSubtitle: [{ type: Input }],
+        showUnits: [{ type: Input }],
+        showBackground: [{ type: Input }],
+        showInnerStroke: [{ type: Input }],
+        clockwise: [{ type: Input }],
+        responsive: [{ type: Input }],
+        startFromZero: [{ type: Input }],
+        startTime: [{ type: Input }],
+        startPercent: [{ type: Input }],
+        templateOptions: [{ type: Input, args: ['options',] }]
     };
     return CircleProgressComponent;
 }());
-CircleProgressComponent.decorators = [
-    { type: Component, args: [{
-                selector: 'circle-progress',
-                template: "\n    <svg xmlns=\"http://www.w3.org/2000/svg\" *ngIf=\"svg\" \n      [attr.height]=\"svg.height\" [attr.width]=\"svg.width\" (click)=\"emitClickEvent($event)\" [attr.class]=\"options.class\">\n      <circle *ngIf=\"options.showBackground\" \n        [attr.cx]=\"svg.backgroundCircle.cx\" \n        [attr.cy]=\"svg.backgroundCircle.cy\" \n        [attr.r]=\"svg.backgroundCircle.r\" \n        [attr.fill]=\"svg.backgroundCircle.fill\"\n        [attr.fill-opacity]=\"svg.backgroundCircle.fillOpacity\"\n        [attr.stroke]=\"svg.backgroundCircle.stroke\" \n        [attr.stroke-width]=\"svg.backgroundCircle.strokeWidth\"/>\n      <circle *ngIf=\"options.showInnerStroke\" \n        [attr.cx]=\"svg.circle.cx\" \n        [attr.cy]=\"svg.circle.cy\" \n        [attr.r]=\"svg.circle.r\" \n        [attr.fill]=\"svg.circle.fill\"\n        [attr.stroke]=\"svg.circle.stroke\" \n        [attr.stroke-width]=\"svg.circle.strokeWidth\"/>\n      <path \n        [attr.d]=\"svg.path.d\" \n        [attr.stroke]=\"svg.path.stroke\"\n        [attr.stroke-width]=\"svg.path.strokeWidth\" \n        [attr.stroke-linecap]=\"svg.path.strokeLinecap\"\n        [attr.fill]=\"svg.path.fill\"/>\n      <text *ngIf=\"options.showTitle || options.showUnits || options.showSubtitle\" \n        alignment-baseline=\"baseline\"\n        [attr.x]=\"svg.circle.cx\"\n        [attr.y]=\"svg.circle.cy\"\n        [attr.text-anchor]=\"svg.title.textAnchor\">\n        <ng-container *ngIf=\"options.showTitle\">\n          <tspan *ngFor=\"let tspan of svg.title.tspans\"\n            [attr.x]=\"svg.title.x\"\n            [attr.y]=\"svg.title.y\"\n            [attr.dy]=\"tspan.dy\"\n            [attr.font-size]=\"svg.title.fontSize\" \n            [attr.fill]=\"svg.title.color\">{{tspan.span}}</tspan>\n        </ng-container>\n        <tspan *ngIf=\"options.showUnits\"\n          [attr.font-size]=\"svg.units.fontSize\"\n          [attr.fill]=\"svg.units.color\">{{svg.units.text}}</tspan>\n        <ng-container *ngIf=\"options.showSubtitle\">\n          <tspan *ngFor=\"let tspan of svg.subtitle.tspans\"\n            [attr.x]=\"svg.subtitle.x\"\n            [attr.y]=\"svg.subtitle.y\"\n            [attr.dy]=\"tspan.dy\"\n            [attr.font-size]=\"svg.subtitle.fontSize\"\n            [attr.fill]=\"svg.subtitle.color\">{{tspan.span}}</tspan>\n        </ng-container>\n      </text>\n    </svg>  \n  "
-            },] },
-];
-/**
- * @nocollapse
- */
-CircleProgressComponent.ctorParameters = function () { return [
-    { type: CircleProgressOptions, },
-]; };
-CircleProgressComponent.propDecorators = {
-    'onClick': [{ type: Output },],
-    'class': [{ type: Input },],
-    'backgroundColor': [{ type: Input },],
-    'backgroundOpacity': [{ type: Input },],
-    'backgroundStroke': [{ type: Input },],
-    'backgroundStrokeWidth': [{ type: Input },],
-    'backgroundPadding': [{ type: Input },],
-    'radius': [{ type: Input },],
-    'space': [{ type: Input },],
-    'percent': [{ type: Input },],
-    'toFixed': [{ type: Input },],
-    'maxPercent': [{ type: Input },],
-    'renderOnClick': [{ type: Input },],
-    'units': [{ type: Input },],
-    'unitsFontSize': [{ type: Input },],
-    'unitsColor': [{ type: Input },],
-    'outerStrokeWidth': [{ type: Input },],
-    'outerStrokeColor': [{ type: Input },],
-    'outerStrokeLinecap': [{ type: Input },],
-    'innerStrokeColor': [{ type: Input },],
-    'innerStrokeWidth': [{ type: Input },],
-    'titleFormat': [{ type: Input },],
-    'title': [{ type: Input },],
-    'titleColor': [{ type: Input },],
-    'titleFontSize': [{ type: Input },],
-    'subtitleFormat': [{ type: Input },],
-    'subtitle': [{ type: Input },],
-    'subtitleColor': [{ type: Input },],
-    'subtitleFontSize': [{ type: Input },],
-    'animation': [{ type: Input },],
-    'animateTitle': [{ type: Input },],
-    'animateSubtitle': [{ type: Input },],
-    'animationDuration': [{ type: Input },],
-    'showTitle': [{ type: Input },],
-    'showSubtitle': [{ type: Input },],
-    'showUnits': [{ type: Input },],
-    'showBackground': [{ type: Input },],
-    'showInnerStroke': [{ type: Input },],
-    'clockwise': [{ type: Input },],
-    'templateOptions': [{ type: Input, args: ['options',] },],
-};
 
-var NgCircleProgressModule = (function () {
+/**
+ * @fileoverview added by tsickle
+ * @suppress {checkTypes} checked by tsc
+ */
+var NgCircleProgressModule = /** @class */ (function () {
     function NgCircleProgressModule() {
     }
     /**
      * @param {?=} options
      * @return {?}
      */
-    NgCircleProgressModule.forRoot = function (options) {
-        if (options === void 0) { options = {}; }
-        return {
-            ngModule: NgCircleProgressModule,
-            providers: [
-                { provide: CircleProgressOptions, useValue: options }
-            ]
+    NgCircleProgressModule.forRoot = /**
+     * @param {?=} options
+     * @return {?}
+     */
+        function (options) {
+            if (options === void 0) { options = {}; }
+            return {
+                ngModule: NgCircleProgressModule,
+                providers: [
+                    { provide: CircleProgressOptions, useValue: options }
+                ]
+            };
         };
-    };
-    return NgCircleProgressModule;
-}());
-NgCircleProgressModule.decorators = [
-    { type: NgModule, args: [{
+    NgCircleProgressModule.decorators = [
+        {
+            type: NgModule, args: [{
                 imports: [
                     CommonModule
                 ],
@@ -427,11 +490,10 @@ NgCircleProgressModule.decorators = [
                 exports: [
                     CircleProgressComponent,
                 ]
-            },] },
-];
-/**
- * @nocollapse
- */
-NgCircleProgressModule.ctorParameters = function () { return []; };
+            },]
+        },
+    ];
+    return NgCircleProgressModule;
+}());
 
 export { NgCircleProgressModule, CircleProgressOptions, CircleProgressComponent };
